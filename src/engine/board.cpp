@@ -32,3 +32,21 @@ void Board::remove(int piece_id, const std::vector<Cell>& variant, const Cell& o
         grid[p.y * weight + p.x] = -1;
     }
 }
+
+void Board::print() const {
+    for (int y = 0; y < height ; ++y) {
+        for (int x = 0; x < weight ; ++x) {
+            int val = grid[y * weight + x];
+            if (val == -1) {
+                std::cout << ". ";
+            } else {
+                std::cout << val << " ";
+            }
+        }
+        std::cout << std::endl;
+    }
+}
+
+void Board::clear() {
+    std::fill(grid.begin(), grid.end(), -1);
+}

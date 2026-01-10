@@ -1,5 +1,6 @@
 #include <algorithm>
 #include <set>
+#include <iostream>
 #include "piece.h"
 
 Piece::Piece(int _id, std::vector<Cell> _shape) : id(_id), shape(_shape) {
@@ -68,3 +69,12 @@ const std::vector<std::vector<Cell>>& Piece::get_variants() const {
     return variants;
 }
 
+void Piece::print() const {
+    std::cout << "Piece ID: " << id << "\n";
+    std::cout << "Base Shape:\n";
+    for (const auto& c : shape) {
+        std::cout << "(" << c.x << ", " << c.y << ") ";
+    }
+    std::cout << std::endl;
+}
+    

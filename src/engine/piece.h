@@ -27,6 +27,7 @@ public:
     const std::vector<Cell>& get_shape() const;
     const std::vector<std::vector<Cell>>& get_variants() const;
 
+    void print() const; // useful for debug
 };
 
 #endif

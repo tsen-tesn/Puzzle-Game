@@ -1,8 +1,8 @@
 #include <gtest/gtest.h>
 #include <algorithm>
 #include <iostream>
-#include "../src/cell.h"
-#include "../src/piece.h"
+#include "../src/engine/cell.h"
+#include "../src/engine/piece.h"
 
 TEST(CellTest, MakeCellTest) {
     Cell cell{1, 0};

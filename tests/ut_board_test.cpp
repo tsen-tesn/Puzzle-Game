@@ -1,6 +1,6 @@
 #include <gtest/gtest.h>
 #include <iostream>
-#include "../src/board.h"
+#include "../src/engine/board.h"
 
 TEST(BoardTest, MakeBoardTEST) {
     Board board{5, 10};

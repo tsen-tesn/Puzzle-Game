@@ -20,8 +20,10 @@ private:
     std::vector<Placement> placements_path; // current placements
 
 public:
+    // Solver() = delete;
     Solver(Board& b, const std::vector<Piece>& p);
 
+    void reset();
     bool solve();
 
     const std::vector<Placement>& get_placements_path() const;

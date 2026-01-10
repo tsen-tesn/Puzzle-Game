@@ -2,6 +2,7 @@
 #define BOARD_H
 
 #include <vector>
+#include <iostream>
 #include "piece.h"
 
 class Board {
@@ -23,6 +24,10 @@ public:
 
     int get_width() const { return weight; }
     int get_height() const { return height; }
+
+    void print() const; // For debugging purposes
+
+    void clear();
 };
 
 #endif

@@ -4,6 +4,13 @@
 Solver::Solver(Board& b, const std::vector<Piece>& p)
     : board(b), pieces(p), piece_used(p.size(), 0) {}
 
+
+void Solver::reset() {
+    placements_path.clear();
+    std::fill(piece_used.begin(), piece_used.end(), 0);
+}
+
+
 bool Solver::solve() {
     // 重要：每次 solve 都要重置狀態，避免上次結果污染
     placements_path.clear();
@@ -75,3 +82,4 @@ bool Solver::dfs() {
 const std::vector<Placement>& Solver::get_placements_path() const {
     return placements_path;
 }
+
