@@ -58,3 +58,15 @@ void Game::reset_game() {
     board.clear();
     std::cout << "Game reset.\n";
 }
+
+void Game::load_level(const std::string& filename) {
+    LevelData level_data = LevelLoader::load_level(filename);
+    width = level_data.width;
+    height = level_data.height;
+    pieces = level_data.pieces;
+    board = Board(width, height);
+
+    std::cout << "Loaded level: " << filename
+              << " (" << width << "x" << height
+              << "), pieces=" << pieces.size() << std::endl;
+}

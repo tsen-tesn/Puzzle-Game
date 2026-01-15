@@ -4,6 +4,7 @@
 #include <iostream>
 #include <vector>
 #include "../engine/solver.h"
+#include "level_loader.h"
 
 class Game {
 public:
@@ -13,6 +14,8 @@ public:
         solve_game();
     }
     void run();
+
+    void load_level(const std::string& filename);
 
 private:
     void print_menu() const;
