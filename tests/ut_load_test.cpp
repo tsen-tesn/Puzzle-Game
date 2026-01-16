@@ -6,7 +6,7 @@
 #include "../src/game/game.h"
 
 TEST(LoadTest, LoadSampleTest) {
-    std::filesystem::path sample_path = "../levels/intermediate/levelA/level3.txt";
+    std::filesystem::path sample_path = "../levels/The small slam/levelA/level3.txt";
     std::ifstream file(sample_path);
     EXPECT_TRUE(file.is_open());
     std::string line1, line2, line3;
@@ -27,7 +27,7 @@ TEST(LoadTest, LevelDataStructureTest) {
 }
 
 TEST(LoadTest, LoadLevelTest) {
-    LevelData ld = LevelLoader::load_level("../levels/intermediate/levelA/level3.txt");
+    LevelData ld = LevelLoader::load_level("../levels/The small slam/levelA/level3.txt");
     EXPECT_EQ(3, ld.width);
     EXPECT_EQ(5, ld.height);
     EXPECT_EQ(3, ld.pieces.size());
