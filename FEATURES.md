@@ -11,7 +11,7 @@ The solver is implemented in C++ using an object-oriented architecture and suppo
 
 ## F1: Project Architecture
 
-- x ] F1: Core architecture setup
+- [x] F1: Core architecture setup
   - [x] T1.1: Define class responsibilities (Game / Board / Piece / Placement / Solver)
   - [x] T1.2: Create base folder structure (`/src`)
   - [x] T1.3: Create basic header/source files
