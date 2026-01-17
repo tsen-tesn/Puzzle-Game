@@ -26,24 +26,50 @@ set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
 FetchContent_MakeAvailable(googletest)
 
 # -----------------------------
-# Sources (engine + game)
+# Sources
 # -----------------------------
 file(GLOB_RECURSE ENGINE_SOURCES CONFIGURE_DEPENDS src/engine/*.cpp)
 file(GLOB_RECURSE GAME_SOURCES   CONFIGURE_DEPENDS src/game/*.cpp)
 
-set(SOURCES ${ENGINE_SOURCES} ${GAME_SOURCES})
+# web 只收「API 的 cpp」，不要把 server.cpp 也丟進去
+file(GLOB_RECURSE WEB_SOURCES    CONFIGURE_DEPENDS src/web/*.cpp)
+list(FILTER WEB_SOURCES EXCLUDE REGEX ".*/server\\.cpp$")
+
+set(COMMON_SOURCES ${ENGINE_SOURCES} ${GAME_SOURCES})
+set(ALL_SOURCES ${COMMON_SOURCES} ${WEB_SOURCES})
 
 # -----------------------------
-# App executable (main program)
+# Game executable (main program)
 # -----------------------------
-add_executable(app src/main.cpp ${SOURCES})
+add_executable(game src/main.cpp ${ALL_SOURCES})
+
+# -----------------------------
+# Server executable
+# -----------------------------
+add_executable(server src/web/server.cpp ${ALL_SOURCES})
+
+target_include_directories(server PRIVATE
+    src
+    src/engine
+    src/game
+    src/web
+    external
+)
+
+# （可選）如果 game 也需要 include web headers，可加，但通常不需要 external
+target_include_directories(game PRIVATE
+    src
+    src/engine
+    src/game
+    src/web
+)
 
 # -----------------------------
 # Unit tests
 # -----------------------------
 file(GLOB_RECURSE UNIT_TESTS CONFIGURE_DEPENDS tests/*.cpp)
 
-add_executable(unit_tests ${UNIT_TESTS} ${SOURCES})
+add_executable(unit_tests ${UNIT_TESTS} ${ALL_SOURCES})
 target_link_libraries(unit_tests PRIVATE gtest_main)
 
 include(GoogleTest)

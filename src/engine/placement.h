@@ -17,3 +17,18 @@ public:
 };
 
 #endif
+
+
+// placement.h
+// --------------------------------
+// Represents a single placement decision in a solution:
+// - which piece
+// - which variant
+// - placed at which offset
+//
+// This is used as:
+// - Solver output
+// - API output
+// - Step-by-step replay
+//
+// Placement is a pure data object.

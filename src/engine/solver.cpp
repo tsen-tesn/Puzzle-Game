@@ -12,7 +12,6 @@ void Solver::reset() {
 
 
 bool Solver::solve() {
-    // 重要：每次 solve 都要重置狀態，避免上次結果污染
     placements_path.clear();
     std::fill(piece_used.begin(), piece_used.end(), 0);
 
@@ -20,7 +19,6 @@ bool Solver::solve() {
 }
 
 bool Solver::dfs() {
-    // 1) 找到棋盤上第一個空格（目標格）
     Cell empty_cell{-1, -1};
     for (int y = 0; y < board.get_height(); ++y) {
         for (int x = 0; x < board.get_width(); ++x) {

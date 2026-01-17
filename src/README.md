@@ -4,7 +4,7 @@
 
 ```text
 src/
-├── engine/
+├── engine/             # 單純演算法
 |   ├── cell.h
 |   ├── piece.h
 |   ├── piece.cpp
@@ -13,7 +13,7 @@ src/
 |   ├── placement.h
 |   ├── solver.h
 |   └── solver.cpp       
-├── game/      
+├── game/               # 遊戲層 (關卡、流程、載入)
 │   ├── game.h
 │   ├── game.cpp
 |   ├── level_data.h
@@ -21,5 +21,5 @@ src/
 |   ├── level_loader.cpp
 |   ├── piece_library.h
 │   └── piece_library.cpp
-└── web/       
+└── web/                # 對外 API
 ```
