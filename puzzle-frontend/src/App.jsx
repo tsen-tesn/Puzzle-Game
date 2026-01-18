@@ -1,35 +1,33 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import './App.css'
+import { useMemo } from 'react'
+import Board from './components/Board'
 
-function App() {
-  const [count, setCount] = useState(0)
+export default function App() {
+  const width = 5
+  const height = 5
+
+  // 假資料：先填出幾個格子測試（-1 表示空）
+  const grid = useMemo(() => {
+    const g = Array(width * height).fill(-1)
+    // 隨便填一些 pieceId
+    g[0] = 0
+    g[1] = 0
+    g[5] = 1
+    g[6] = 1
+    g[12] = 2
+    g[18] = 3
+    return g
+  }, [])
 
   return (
-    <>
-      <div>
-        <a href="https://vite.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.jsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
+    <div style={{ padding: 16, fontFamily: 'sans-serif' }}>
+      <h2>Puzzle Game</h2>
+      <Board width={width} height={height} grid={grid} />
+      <p style={{ color: '#666' }}>
+        -1 代表空格
       </p>
-    </>
+      <p style={{ color: '#666' }}>
+        數字代表 pieceId
+      </p>
+    </div>
   )
 }
-
-export default App
