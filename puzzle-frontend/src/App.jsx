@@ -19,9 +19,11 @@ export default function App() {
   }, [])
 
   return (
-    <div style={{ padding: 16, fontFamily: 'sans-serif' }}>
-      <h2>Puzzle Game</h2>
-      <Board width={width} height={height} grid={grid} />
+    <div style={{ padding: 16, fontFamily: 'sans-serif', justifyContent: 'center', width: '100vw' }}>
+      <h2 style = {{ textAlign: 'center' }}>Katamino</h2>
+      <div style={{ padding: 10, justifyContent: 'center', display: 'flex' }}>
+        <Board width={width} height={height} grid={grid} />
+      </div>
       <p style={{ color: '#666' }}>
         -1 代表空格
       </p>
