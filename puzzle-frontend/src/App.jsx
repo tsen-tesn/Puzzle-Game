@@ -1,6 +1,7 @@
 import { useMemo } from 'react'
 import Board from './components/Board'
 
+// import Puzzle 
 export default function App() {
   const width = 5
   const height = 5
