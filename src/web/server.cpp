@@ -67,39 +67,45 @@ int main() {
         res.status = 200;
     });
 
-    // Solve endpoint
-    svr.Post("/solve", [](const httplib::Request& req, httplib::Response& res) {
-        add_cors(res);
 
-        try {
-            json body = json::parse(req.body);
-
-            SolveRequest sr;
-            sr.width = body.value("width", 0);
-            sr.height = body.value("height", 0);
-
-            if (body.contains("pieceIds") && body["pieceIds"].is_array()) {
-                for (const auto& v : body["pieceIds"]) {
-                    sr.piece_ids.push_back(v.get<int>());
-                }
-            }
-
-            SolveResult result = solve_puzzle(sr);
-
-            json out = to_json(result);
-            res.set_content(out.dump(2), "application/json; charset=utf-8");
-            res.status = 200;
-
-        } catch (const std::exception& e) {
-            json err;
-            err["solved"] = false;
-            err["error"] = std::string("Bad request: ") + e.what();
-            err["placements"] = json::array();
-
-            res.set_content(err.dump(2), "application/json; charset=utf-8");
-            res.status = 400;
-        }
+    svr.Post("/solve", [](const httplib::Request&, httplib::Response& res) {
+        res.set_content("solve hit", "text/plain; charset=utf-8");
+        res.status = 200;
     });
+
+    // Solve endpoint
+    // svr.Post("/solve", [](const httplib::Request& req, httplib::Response& res) {
+    //     add_cors(res);
+
+    //     try {
+    //         json body = json::parse(req.body);
+
+    //         SolveRequest sr;
+    //         sr.width = body.value("width", 0);
+    //         sr.height = body.value("height", 0);
+
+    //         if (body.contains("pieceIds") && body["pieceIds"].is_array()) {
+    //             for (const auto& v : body["pieceIds"]) {
+    //                 sr.piece_ids.push_back(v.get<int>());
+    //             }
+    //         }
+
+    //         SolveResult result = solve_puzzle(sr);
+
+    //         json out = to_json(result);
+    //         res.set_content(out.dump(2), "application/json; charset=utf-8");
+    //         res.status = 200;
+
+    //     } catch (const std::exception& e) {
+    //         json err;
+    //         err["solved"] = false;
+    //         err["error"] = std::string("Bad request: ") + e.what();
+    //         err["placements"] = json::array();
+
+    //         res.set_content(err.dump(2), "application/json; charset=utf-8");
+    //         res.status = 400;
+    //     }
+    // });
 
     // （可選）若你想保留這段也行，但上面我們已經每個 handler 都 add_cors 了
     // svr.set_post_routing_handler([](const httplib::Request&, httplib::Response& res) {
