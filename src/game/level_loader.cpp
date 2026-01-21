@@ -5,7 +5,7 @@
 #include <vector>
 #include <string>
 #include "level_loader.h"
-#include "piece_library.h"
+#include "../engine/piece_library.h"
 
 LevelData LevelLoader::load_level(const std::string& filename) {
     LevelData levelData;

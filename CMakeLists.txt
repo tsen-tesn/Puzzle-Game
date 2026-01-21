@@ -15,18 +15,15 @@ option(BUILD_SERVER_ONLY "Build only server for deployment (Render)" OFF)
 file(GLOB_RECURSE ENGINE_SOURCES CONFIGURE_DEPENDS src/engine/*.cpp)
 file(GLOB_RECURSE GAME_SOURCES   CONFIGURE_DEPENDS src/game/*.cpp)
 
-# web：收 API cpp，但排除 server.cpp
-file(GLOB_RECURSE WEB_SOURCES CONFIGURE_DEPENDS src/web/*.cpp)
+file(GLOB_RECURSE WEB_SOURCES    CONFIGURE_DEPENDS src/web/*.cpp)
 list(FILTER WEB_SOURCES EXCLUDE REGEX ".*/server\\.cpp$")
 
+# Render 模式：只編 engine + web(api)，不要編 game
 if(BUILD_SERVER_ONLY)
     set(ALL_SOURCES ${ENGINE_SOURCES} ${WEB_SOURCES})
 else()
     set(ALL_SOURCES ${ENGINE_SOURCES} ${GAME_SOURCES} ${WEB_SOURCES})
 endif()
-
-set(COMMON_SOURCES ${ENGINE_SOURCES} ${GAME_SOURCES})
-set(ALL_SOURCES ${COMMON_SOURCES} ${WEB_SOURCES})
 
 # ======================================
 # Server executable (ALWAYS build)
