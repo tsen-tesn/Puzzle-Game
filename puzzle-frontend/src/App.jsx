@@ -25,6 +25,10 @@ const API_BASE = import.meta.env.PROD
   ? 'https://puzzle-game-698n.onrender.com/'   // production server URL
   : '';
 
+const url = import.meta.env.PROD
+  ? new URL('solve', API_BASE).toString() 
+  : '/solve';
+
 export default function App() {
   const [width, setWidth] = useState(10)
   const [height, setHeight] = useState(5)
@@ -39,7 +43,6 @@ export default function App() {
     setLoading(true)
     setMsg('Solving...')
     try {
-      const url = `${API_BASE}/solve`;
       const res = await fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
