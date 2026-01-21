@@ -14,13 +14,16 @@ export default function Board({ width, height, grid }) {
         const y = Math.floor(idx / width)
         const filled = v !== -1
 
+        // pieceId 對應 class：piece-0, piece-1, piece-2...
+        const pieceClass = filled ? `piece-${v}` : ''
+
         return (
           <div
             key={idx}
-            className={`cell ${filled ? 'filled' : ''}`}
+            className={`cell ${filled ? 'filled' : ''} ${pieceClass}`}
             title={`(${x}, ${y}) value=${v}`}
           >
-            {filled ? v : ''}
+            {''}
           </div>
         )
       })}

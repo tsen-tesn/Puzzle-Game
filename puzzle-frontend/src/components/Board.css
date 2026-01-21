@@ -18,9 +18,26 @@
   justify-content: center;
   font-size: 14px;
   user-select: none;
+  border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
+/* filled 不指定顏色，顏色交給 piece-xxx class */
 .cell.filled {
-  background: #3b82f6; /* 先用同色，之後我們再依 pieceId 變色 */
   font-weight: 700;
 }
+
+/* pieceId 對應顏色（你現在先做 0,1,2 就夠） */
+.cell.piece-0 { background: #d17b38; } 
+.cell.piece-1 { background: #22c55e; } 
+.cell.piece-2 { background: #763bf6; } 
+.cell.piece-3 { background: #d138c7; } 
+.cell.piece-4 { background: #0f8f3e; } 
+.cell.piece-5 { background: #39a6ff; } 
+.cell.piece-6 { background: #384ad1; } 
+.cell.piece-7 { background: #a31ef0; } 
+.cell.piece-8 { background: #e9dc4d; } 
+.cell.piece-9 { background: #ef89ea; } 
+.cell.piece-10 { background: #eb9f24; }
+.cell.piece-11 { background: #d3f720; } 
+
+/* 如果之後要擴充 0~11，可以再加 piece-3 ~ piece-11 */

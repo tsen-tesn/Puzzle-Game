@@ -1,35 +1,115 @@
-import { useMemo } from 'react'
-import Board from './components/Board'
+import { useMemo, useState } from 'react'
+import Board from './components/Board.jsx'
 
-// import Puzzle 
+function emptyGrid(width, height) {
+  return Array(width * height).fill(-1)
+}
+
+function applyPlacementsToGrid(width, height, placements) {
+  const g = emptyGrid(width, height)
+
+  for (const p of placements) {
+    const id = p.pieceId
+    for (const c of p.cells) {
+      const x = c.x
+      const y = c.y
+      if (x < 0 || x >= width || y < 0 || y >= height) continue
+      g[y * width + x] = id
+    }
+  }
+
+  return g
+}
+
 export default function App() {
-  const width = 5
-  const height = 5
+  const [width, setWidth] = useState(10)
+  const [height, setHeight] = useState(5)
 
-  // 假資料：先填出幾個格子測試（-1 表示空）
-  const grid = useMemo(() => {
-    const g = Array(width * height).fill(-1)
-    // 隨便填一些 pieceId
-    g[0] = 0
-    g[1] = 0
-    g[5] = 1
-    g[6] = 1
-    g[12] = 2
-    g[18] = 3
-    return g
-  }, [])
+  const [grid, setGrid] = useState(() => emptyGrid(10, 5))
+  const [loading, setLoading] = useState(false)
+  const [msg, setMsg] = useState('')
+
+  const pieceIds = useMemo(() => [0, 1, 2, 3, 5, 7, 8, 9, 10, 11], [])
+
+  async function solve() {
+    setLoading(true)
+    setMsg('Solving...')
+    try {
+      const res = await fetch('/solve', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          width,
+          height,
+          pieceIds,
+        }),
+      })
+
+      const data = await res.json()
+
+      if (!data.solved) {
+        setMsg(data.error || 'No solution')
+        setGrid(emptyGrid(width, height))
+        return
+      }
+
+      setMsg('Solved!')
+      const newGrid = applyPlacementsToGrid(width, height, data.placements)
+      setGrid(newGrid)
+    } catch (e) {
+      setMsg('Request failed: ' + String(e))
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  function clearBoard() {
+    setGrid(emptyGrid(width, height))
+    setMsg('')
+  }
 
   return (
-    <div style={{ padding: 16, fontFamily: 'sans-serif', justifyContent: 'center', width: '100vw' }}>
-      <h2 style = {{ textAlign: 'center' }}>Katamino</h2>
-      <div style={{ padding: 10, justifyContent: 'center', display: 'flex' }}>
-        <Board width={width} height={height} grid={grid} />
+    <div style={{ padding: 16, fontFamily: 'sans-serif' }}>
+      <h2>Puzzle Game</h2>
+
+      <div style={{ display: 'flex', gap: 12, alignItems: 'center', marginBottom: 12 }}>
+        <label>
+          W:&nbsp;
+          <input
+            type="number"
+            value={width}
+            min={1}
+            onChange={(e) => setWidth(Number(e.target.value))}
+            style={{ width: 60 }}
+          />
+        </label>
+
+        <label>
+          H:&nbsp;
+          <input
+            type="number"
+            value={height}
+            min={1}
+            onChange={(e) => setHeight(Number(e.target.value))}
+            style={{ width: 60 }}
+          />
+        </label>
+
+        <button onClick={solve} disabled={loading}>
+          {loading ? 'Solving...' : 'Solve'}
+        </button>
+
+        <button onClick={clearBoard} disabled={loading}>
+          Clear
+        </button>
+
+        <span style={{ marginLeft: 8 }}>{msg}</span>
       </div>
-      <p style={{ color: '#666' }}>
-        -1 代表空格
-      </p>
-      <p style={{ color: '#666' }}>
-        數字代表 pieceId
+
+      <Board width={width} height={height} grid={grid} />
+
+      <p style={{ color: '#666', marginTop: 12 }}>
+        按下 Solve 後端會送出答案 顯示在棋盤上
       </p>
     </div>
   )
