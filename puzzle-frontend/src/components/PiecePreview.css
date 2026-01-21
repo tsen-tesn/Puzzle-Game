@@ -1,0 +1,30 @@
+.pieceCard {
+  background: #111;
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 12px;
+  padding: 10px;
+}
+
+.pieceTitle {
+  color: #ddd;
+  font-size: 14px;
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+
+.pieceGrid {
+  display: grid;
+  gap: 3px;
+  background: #1f1f1f;
+  padding: 8px;
+  border-radius: 10px;
+}
+
+.pCell {
+  border-radius: 6px;
+  border: 1px solid rgba(255,255,255,0.08);
+}
+
+.pCell.empty {
+  background: #2a2a2a;
+}

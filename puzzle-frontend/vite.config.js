@@ -7,6 +7,8 @@ export default defineConfig(({ mode }) => ({
   server: {
     proxy: {
       '/solve': 'http://127.0.0.1:8080',
+      '/health': 'http://127.0.0.1:8080',
+      '/pieces': 'http://127.0.0.1:8080',
     },
   },
 }))
