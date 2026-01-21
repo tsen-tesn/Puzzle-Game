@@ -56,11 +56,8 @@ static json to_json(const SolveResult& r) {
 int main() {
     httplib::Server svr;
 
-    // ✅ 一定要處理 OPTIONS（preflight）
-    // 讓瀏覽器跨域 POST /solve 時不會 Failed to fetch
-    svr.Options(R"(.*)", [](const httplib::Request&, httplib::Response& res) {
-        add_cors(res);
-        res.status = 204;
+    svr.Get("/", [](const httplib::Request&, httplib::Response& res) {
+        res.set_content("puzzle-backend alive", "text/plain");
     });
 
     // 健康檢查
@@ -108,6 +105,18 @@ int main() {
     // svr.set_post_routing_handler([](const httplib::Request&, httplib::Response& res) {
     //     add_cors(res);
     // });
+    svr.Options(R"(.*)", [](const httplib::Request&, httplib::Response& res) {
+        res.set_header("Access-Control-Allow-Origin", "*");
+        res.set_header("Access-Control-Allow-Methods", "POST, GET, OPTIONS");
+        res.set_header("Access-Control-Allow-Headers", "Content-Type");
+        res.status = 204;
+    });
+
+    svr.set_post_routing_handler([](const httplib::Request&, httplib::Response& res) {
+        res.set_header("Access-Control-Allow-Origin", "*");
+        res.set_header("Access-Control-Allow-Methods", "POST, GET, OPTIONS");
+        res.set_header("Access-Control-Allow-Headers", "Content-Type");
+    });
 
     const int port = get_port();
     std::cout << "Server listening on port " << port << "\n";
