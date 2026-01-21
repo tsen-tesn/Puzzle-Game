@@ -21,6 +21,10 @@ function applyPlacementsToGrid(width, height, placements) {
   return g
 }
 
+const API_BASE = import.meta.env.PROD
+  ? 'https://puzzle-game-698n.onrender.com/'   // production server URL
+  : '';
+
 export default function App() {
   const [width, setWidth] = useState(10)
   const [height, setHeight] = useState(5)
@@ -35,7 +39,7 @@ export default function App() {
     setLoading(true)
     setMsg('Solving...')
     try {
-      const res = await fetch('/solve', {
+      const res = await fetch('${API_BASE}/solve', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
