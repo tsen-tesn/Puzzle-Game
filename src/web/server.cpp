@@ -56,12 +56,17 @@ static json to_json(const SolveResult& r) {
 int main() {
     httplib::Server svr;
 
-    svr.set_error_handler([](const httplib::Request&, httplib::Response& res) {
+    svr.set_error_handler([](const httplib::Request& req, httplib::Response& res) {
         add_cors(res);
-        if (res.body.empty()) {
-            res.set_content("error", "text/plain; charset=utf-8");
-        }
+
+        nlohmann::json j;
+        j["solved"] = false;
+        j["error"] = "HTTP error " + std::to_string(res.status) + " at " + req.path;
+        j["placements"] = nlohmann::json::array();
+
+        res.set_content(j.dump(), "application/json; charset=utf-8");
     });
+
 
 
     svr.Options(R"(.*)", [](const httplib::Request&, httplib::Response& res) {

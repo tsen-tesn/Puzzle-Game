@@ -50,7 +50,14 @@ export default function App() {
         }),
       })
 
-      const data = await res.json()
+      const text = await res.text()
+      let data
+      try {
+        data = JSON.parse(text)
+      } catch {
+        setMsg(`Backend not JSON (status ${res.status}): ${text.slice(0, 120)}`)
+        return
+      }
 
       if (!data.solved) {
         setMsg(data.error || 'No solution')
