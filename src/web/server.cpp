@@ -1,11 +1,23 @@
 #include <iostream>
 #include <string>
+#include <cstdlib>      // for render
 #include "solve_api.h"
 
 #include "httplib.h"
 #include "json.hpp"
 
 using json = nlohmann::json;
+
+static int get_port() {
+    if (const char* p = std::getenv("PORT")) {
+        try {
+            return std::stoi(p);
+        } catch (...) {
+            // fall through
+        }
+    }
+    return 8080; // 本機預設
+}
 
 // 把 SolveResult 轉成 JSON（你現在已經是 DTO：pieceId + cells[x,y]）
 static json to_json(const SolveResult& r) {
@@ -89,7 +101,8 @@ int main() {
         res.set_header("Access-Control-Allow-Headers", "Content-Type");
     });
 
-    const int port = 8080;
+    // const int port = 8080;   
+    const int port = get_port();    // for the render
     std::cout << "Server running on http://localhost:" << port << "\n";
     std::cout << "GET  /health\n";
     std::cout << "POST /solve\n";
