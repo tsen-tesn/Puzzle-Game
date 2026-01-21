@@ -13,7 +13,7 @@ export default function PiecePreview({ pieceId, cells, cellSize = 16 }) {
 
   return (
     <div className="pieceCard">
-      <div className="pieceTitle">Piece {pieceId + 1}</div>
+      <div className="pieceTitle">Piece {pieceId}</div>
       <div
         className="pieceGrid"
         style={{
