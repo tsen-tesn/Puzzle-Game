@@ -39,7 +39,8 @@ export default function App() {
     setLoading(true)
     setMsg('Solving...')
     try {
-      const res = await fetch('${API_BASE}/solve', {
+      const url = `${API_BASE}/solve`;
+      const res = await fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
