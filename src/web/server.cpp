@@ -1,6 +1,8 @@
 #include <iostream>
 #include <string>
 #include <cstdlib>      // getenv
+
+#include "../engine/piece_library.h"
 #include "solve_api.h"
 
 #include "httplib.h"
@@ -86,6 +88,33 @@ int main() {
         res.set_content("ok", "text/plain; charset=utf-8");
         res.status = 200;
     });
+
+    svr.Get("/pieces", [](const httplib::Request&, httplib::Response& res) {
+        add_cors(res);
+
+        json out;
+        out["pieces"] = json::array();
+
+        // 取得全部拼圖（用你現成的 PieceLibrary）
+        std::vector<Piece> pieces = PieceLibrary::make_all_pieces();
+
+        for (const auto& p : pieces) {
+            json pj;
+            pj["pieceId"] = p.get_id();
+
+            json cells = json::array();
+            for (const auto& c : p.get_shape()) {
+                cells.push_back({{"x", c.x}, {"y", c.y}});
+            }
+            pj["cells"] = std::move(cells);
+
+            out["pieces"].push_back(std::move(pj));
+        }
+
+        res.set_content(out.dump(2), "application/json; charset=utf-8");
+        res.status = 200;
+    });
+
 
     svr.Post("/solve", [](const httplib::Request& req, httplib::Response& res) {
         add_cors(res);
