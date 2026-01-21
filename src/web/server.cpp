@@ -56,35 +56,40 @@ static json to_json(const SolveResult& r) {
 int main() {
     httplib::Server svr;
 
-    svr.Get("/", [](const httplib::Request&, httplib::Response& res) {
-        res.set_content("puzzle-backend alive", "text/plain");
+    svr.set_error_handler([](const httplib::Request&, httplib::Response& res) {
+        add_cors(res);
+        if (res.body.empty()) {
+            res.set_content("error", "text/plain; charset=utf-8");
+        }
     });
 
-    // 健康檢查
+
+    svr.Options(R"(.*)", [](const httplib::Request&, httplib::Response& res) {
+        add_cors(res);
+        res.status = 204;
+    });
+
+
+    svr.Get("/", [](const httplib::Request&, httplib::Response& res) {
+        add_cors(res);
+        res.set_content("puzzle-backend alive", "text/plain; charset=utf-8");
+        res.status = 200;
+    });
+
     svr.Get("/health", [](const httplib::Request&, httplib::Response& res) {
         add_cors(res);
         res.set_content("ok", "text/plain; charset=utf-8");
         res.status = 200;
     });
 
-    // for test the solve endpoint
-    // svr.Post("/solve", [](const httplib::Request&, httplib::Response& res) {
-    //     res.set_content("solve hit", "text/plain; charset=utf-8");
-    //     res.status = 200;
-    // });
-
-    // Solve endpoint
     svr.Post("/solve", [](const httplib::Request& req, httplib::Response& res) {
-        // 如果你有 add_cors(res) 就保留
-        res.set_header("Access-Control-Allow-Origin", "*");
-        res.set_header("Access-Control-Allow-Methods", "POST, GET, OPTIONS");
-        res.set_header("Access-Control-Allow-Headers", "Content-Type");
+        add_cors(res);
 
         try {
             json body = json::parse(req.body);
 
             SolveRequest sr;
-            sr.width = body.value("width", 0);
+            sr.width  = body.value("width", 0);
             sr.height = body.value("height", 0);
 
             if (body.contains("pieceIds") && body["pieceIds"].is_array()) {
@@ -104,36 +109,18 @@ int main() {
             err["solved"] = false;
             err["error"] = std::string("Bad request: ") + e.what();
             err["placements"] = json::array();
+
             res.set_content(err.dump(2), "application/json; charset=utf-8");
             res.status = 400;
         }
     });
 
-
-
-    // （可選）若你想保留這段也行，但上面我們已經每個 handler 都 add_cors 了
-    // svr.set_post_routing_handler([](const httplib::Request&, httplib::Response& res) {
-    //     add_cors(res);
-    // });
-    svr.Options(R"(.*)", [](const httplib::Request&, httplib::Response& res) {
-        res.set_header("Access-Control-Allow-Origin", "*");
-        res.set_header("Access-Control-Allow-Methods", "POST, GET, OPTIONS");
-        res.set_header("Access-Control-Allow-Headers", "Content-Type");
-        res.status = 204;
-    });
-
-    svr.set_post_routing_handler([](const httplib::Request&, httplib::Response& res) {
-        res.set_header("Access-Control-Allow-Origin", "*");
-        res.set_header("Access-Control-Allow-Methods", "POST, GET, OPTIONS");
-        res.set_header("Access-Control-Allow-Headers", "Content-Type");
-    });
-
     const int port = get_port();
     std::cout << "Server listening on port " << port << "\n";
+    std::cout << "GET  /\n";
     std::cout << "GET  /health\n";
     std::cout << "POST /solve\n";
 
-    // Render 必須 0.0.0.0
     svr.listen("0.0.0.0", port);
     return 0;
 }
