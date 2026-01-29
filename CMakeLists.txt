@@ -18,9 +18,14 @@ file(GLOB_RECURSE GAME_SOURCES   CONFIGURE_DEPENDS src/game/*.cpp)
 file(GLOB_RECURSE WEB_SOURCES    CONFIGURE_DEPENDS src/web/*.cpp)
 list(FILTER WEB_SOURCES EXCLUDE REGEX ".*/server\\.cpp$")
 
-# Render 模式：只編 engine + web(api)，不要編 game
+
+set(LEVEL_SOURCES
+    src/game/level_loader.cpp
+)
+
+# Render 模式           
 if(BUILD_SERVER_ONLY)
-    set(ALL_SOURCES ${ENGINE_SOURCES} ${WEB_SOURCES})
+    set(ALL_SOURCES ${ENGINE_SOURCES} ${WEB_SOURCES} ${LEVEL_SOURCES})
 else()
     set(ALL_SOURCES ${ENGINE_SOURCES} ${GAME_SOURCES} ${WEB_SOURCES})
 endif()

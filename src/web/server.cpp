@@ -1,14 +1,43 @@
 #include <iostream>
 #include <string>
 #include <cstdlib>      // getenv
+#include <filesystem>
 
 #include "../engine/piece_library.h"
+#include "../game/level_data.h"
+#include "../game/level_loader.h"
 #include "solve_api.h"
 
 #include "httplib.h"
 #include "json.hpp"
 
 using json = nlohmann::json;
+namespace fs = std::filesystem;
+
+
+std::vector<LevelInfo> g_levels;
+
+void load_all_levels() {
+    g_levels.clear();
+
+    for (const auto& entry : fs::directory_iterator("../levels")) {
+        if (entry.path().extension() != ".txt") continue;
+
+        LevelData ld = LevelLoader::load_level(entry.path().string());
+
+        LevelInfo info;
+        info.id = entry.path().stem().string(); // level1
+        info.name = info.id;                    // 先簡單用 id
+        info.width = ld.width;
+        info.height = ld.height;
+
+        for(auto pieces : ld.pieces) {
+            info.pieceIds.push_back(pieces.get_id());
+        }
+        
+        g_levels.push_back(info);
+    }
+}
 
 static int get_port() {
     if (const char* p = std::getenv("PORT")) {
@@ -53,6 +82,8 @@ static json to_json(const SolveResult& r) {
 
 int main() {
     httplib::Server svr;
+
+    load_all_levels();
 
     svr.set_error_handler([](const httplib::Request& req, httplib::Response& res) {
         add_cors(res);
@@ -110,6 +141,26 @@ int main() {
         res.status = 200;
     });
 
+    svr.Get("/levels", [](const httplib::Request&, httplib::Response& res) {
+        add_cors(res);
+
+        json out;
+        out["levels"] = json::array();
+
+        for (const auto& l : g_levels) {
+            out["levels"].push_back({
+                {"id", l.id},
+                {"name", l.name},
+                {"width", l.width},
+                {"height", l.height},
+                {"pieceIds", l.pieceIds}
+            });
+        }
+        
+
+        res.set_content(out.dump(2), "application/json; charset=utf-8");
+        res.status = 200;   
+    });
 
 
     svr.Post("/solve", [](const httplib::Request& req, httplib::Response& res) {

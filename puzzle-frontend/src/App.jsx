@@ -1,17 +1,15 @@
 import { useEffect, useMemo, useState } from 'react'
 import Board from './components/Board.jsx'
 import PiecePreview from './components/PiecePreview.jsx'
-import { LEVELS } from './levels'
 
-// 建立空棋盤
+// 建立空棋盤（-1 代表空）
 function emptyGrid(width, height) {
   return Array(width * height).fill(-1)
 }
 
-// 將後端的 placements 轉變成 棋盤
+// 將後端的 placements 轉成棋盤 grid
 function applyPlacementsToGrid(width, height, placements) {
   const g = emptyGrid(width, height)
-
   for (const p of placements) {
     const id = p.pieceId
     for (const c of p.cells) {
@@ -24,62 +22,90 @@ function applyPlacementsToGrid(width, height, placements) {
   return g
 }
 
-// Render base URL（production） / dev 用 proxy
+// Production( GitHub Pages ) 打 Render；Dev(本機) 走 Vite proxy
 const API_BASE = import.meta.env.PROD
   ? 'https://puzzle-game-698n.onrender.com'
   : ''
 
 function apiUrl(path) {
-  return import.meta.env.PROD
-    ? new URL(path, API_BASE).toString()
-    : `/${path}`
+  // path 例如 'solve' / 'pieces' / 'levels'
+  return import.meta.env.PROD ? new URL(path, API_BASE).toString() : `/${path}`
 }
 
-
-// App 主元件
 export default function App() {
-  // 關卡選擇狀態
-  const [levelId, setLevelId] = useState(LEVELS[0].id)
+  // -----------------------
+  // (A) Levels 狀態
+  // -----------------------
+  const [levels, setLevels] = useState([])
+  const [levelsMsg, setLevelsMsg] = useState('')
+  const [levelId, setLevelId] = useState('')
 
-  const level = useMemo(
-    () =>LEVELS.find(l => l.id === levelId) ?? LEVELS[0],
-    [levelId]
-  )
+  // -----------------------
+  // (B) Pieces 狀態（全部 pieces）
+  // -----------------------
+  const [allPieces, setAllPieces] = useState([])
+  const [piecesMsg, setPiecesMsg] = useState('')
 
-  const width = level.width
-  const height = level.height
-  const pieceIds = level.pieceIds
-  
-
-  const [grid, setGrid] = useState(() => emptyGrid(width, height))
+  // -----------------------
+  // (C) 棋盤狀態
+  // -----------------------
+  const [grid, setGrid] = useState(() => emptyGrid(1, 1)) // 初始先給 1x1，避免 level 還沒載入就爆
   const [loading, setLoading] = useState(false)
   const [msg, setMsg] = useState('')
 
-  const [allPieces, setAllPieces] = useState([]) 
-  // allPieces: [{ pieceId, cells:[{x,y}]}]
-  const [piecesMsg, setPiecesMsg] = useState('')
+  // -----------------------
+  // (D) 取得目前關卡（可能為 null）
+  // -----------------------
+  const level = useMemo(() => {
+    return levels.find(l => l.id === levelId) || null
+  }, [levels, levelId])
+
+  // 給安全預設，避免 level 為 null 時崩潰
+  const width = level ? level.width : 1
+  const height = level ? level.height : 1
+  const pieceIds = level ? level.pieceIds : []
+
+  // -----------------------
+  // (E) 右側顯示：只顯示本關需要的 pieces
+  // -----------------------
   const levelPieces = useMemo(() => {
     const setIds = new Set(pieceIds)
     return allPieces.filter(p => setIds.has(p.pieceId))
   }, [allPieces, pieceIds])
 
-  // 換關卡的時候 從所有的 pieces 中篩選出關卡需要的
+  // =====================================================
+  // useEffect 1：初次載入 levels
+  // =====================================================
   useEffect(() => {
-    setGrid(emptyGrid(width, height))
-    setMsg('')
+    async function loadLevels() {
+      setLevelsMsg('Loading levels...')
+      try {
+        const res = await fetch(apiUrl('levels'))
+        const data = await res.json()
+        const list = data.levels || []
+
+        setLevels(list)
+        setLevelsMsg('')
+
+        // 預設選第一關
+        if (list.length > 0) setLevelId(list[0].id)
+      } catch (e) {
+        setLevelsMsg('Load levels failed: ' + String(e))
+      }
+    }
+    loadLevels()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  // =====================================================
+  // useEffect 2：初次載入 pieces
+  // =====================================================
+  useEffect(() => {
     async function loadPieces() {
       setPiecesMsg('Loading pieces...')
       try {
         const res = await fetch(apiUrl('pieces'))
-        const text = await res.text()
-
-        let data
-        try {
-          data = JSON.parse(text)
-        } catch {
-          setPiecesMsg(`Pieces not JSON (status ${res.status}): ${text.slice(0, 120)}`)
-          return
-        }
+        const data = await res.json()
 
         setAllPieces(data.pieces || [])
         setPiecesMsg('')
@@ -88,11 +114,27 @@ export default function App() {
       }
     }
     loadPieces()
-  }, [levelId, width, height])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
+  // =====================================================
+  // useEffect 3：切換關卡時清空棋盤
+  // =====================================================
+  useEffect(() => {
+    if (!level) return
+    setGrid(emptyGrid(level.width, level.height))
+    setMsg('')
+  }, [levelId, level])
+
+  // =====================================================
+  // Solve：呼叫後端 /solve
+  // =====================================================
   async function solve() {
+    if (!level) return
+
     setLoading(true)
     setMsg('Solving...')
+
     try {
       const res = await fetch(apiUrl('solve'), {
         method: 'POST',
@@ -100,6 +142,7 @@ export default function App() {
         body: JSON.stringify({ width, height, pieceIds }),
       })
 
+      // 用 text -> JSON.parse，避免後端回非 JSON 時直接炸
       const text = await res.text()
       let data
       try {
@@ -125,64 +168,80 @@ export default function App() {
     }
   }
 
-  // clear Board
+  // 清空棋盤
   function clearBoard() {
     setGrid(emptyGrid(width, height))
     setMsg('')
   }
 
+  // =====================================================
+  // Levels 還沒載入時：顯示 loading
+  // =====================================================
+  if (!level) {
+    return (
+      <div style={{ padding: 16, fontFamily: 'sans-serif' }}>
+        <h2>Puzzle Game</h2>
+        <div>{levelsMsg || 'No levels'}</div>
+      </div>
+    )
+  }
+
+  // =====================================================
   // UI
+  // =====================================================
   return (
     <div style={{ padding: 16, fontFamily: 'sans-serif' }}>
       <h2>Puzzle Game</h2>
-      
-      <div>
-        {/*----- 控制列 -----*/}
-        <div style={{ display: 'flex', gap: 12, alignItems: 'center', marginBottom: 12  }}>
-          
-          {/*----- 關卡選擇 -----*/}
-          <label>
-            Level:&nbsp;
-            <select value={levelId} onChange={(e) => setLevelId(e.target.value)}>
-              {LEVELS.map(l =>(
-                <option key={l.id} value={l.id}>
-                  {l.name}
-                </option>
-              ))}
-            </select>
-          </label>
 
-          {/* Solve */}
-          <button onClick={solve} disabled={loading}>
-            {loading ? 'Solving...' : 'Solve'}
-          </button>
+      <div style={{ display: 'flex', gap: 16, alignItems: 'flex-start' }}>
+        {/* 左側：控制列 + 棋盤 */}
+        <div>
+          <div style={{ display: 'flex', gap: 12, alignItems: 'center', marginBottom: 12 }}>
+            {/* 關卡選擇 */}
+            <label>
+              Level:&nbsp;
+              <select value={levelId} onChange={(e) => setLevelId(e.target.value)}>
+                {levels.map(l => (
+                  <option key={l.id} value={l.id}>
+                    {l.name}
+                  </option>
+                ))}
+              </select>
+            </label>
 
-          {/* Clear */}
-          <button onClick={clearBoard} disabled={loading}>
-            Clear
-          </button>
+            {/* Solve */}
+            <button onClick={solve} disabled={loading}>
+              {loading ? 'Solving...' : 'Solve'}
+            </button>
 
-          {/* 訊息 */}
-          <span style={{ marginLeft: 8 }}>{msg}</span>
+            {/* Clear */}
+            <button onClick={clearBoard} disabled={loading}>
+              Clear
+            </button>
+
+            {/* 訊息 */}
+            <span style={{ marginLeft: 8 }}>{msg}</span>
+          </div>
+
+          <Board width={width} height={height} grid={grid} />
+
+          <p style={{ color: '#666', marginTop: 12 }}>
+            選擇關卡後按 Solve，後端會回傳解答並顯示在棋盤上
+          </p>
         </div>
-        {/* ===== 棋盤 ===== */}
-        <Board width={width} height={height} grid={grid} />
 
-        <p style={{ color: '#666', marginTop: 12 }}>
-          選擇關卡後按 Solve 後端會回傳解答並顯示在棋盤上
-        </p>
-      </div>
-      {/* 右：這關的 Pieces */}
-      <div style={{ width: 320}}>
-        <h3 style={{ marginTop: 0 }}>Pieces</h3>
-        {piecesMsg && <div style={{ color: '#aaa', marginBottom: 8 }}>{piecesMsg}</div>}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12 }}>
-          {levelPieces.map(p => (
-            <PiecePreview key={p.pieceId} pieceId={p.pieceId} cells={p.cells} />
-          ))}
+        {/* 右側：本關需要的 pieces */}
+        <div style={{ width: 520 }}>
+          <h3 style={{ marginTop: 0 }}>Pieces</h3>
+          {piecesMsg && <div style={{ color: '#aaa', marginBottom: 8 }}>{piecesMsg}</div>}
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12 }}>
+            {levelPieces.map(p => (
+              <PiecePreview key={p.pieceId} pieceId={p.pieceId} cells={p.cells} />
+            ))}
+          </div>
         </div>
       </div>
- 
     </div>
   )
 }
