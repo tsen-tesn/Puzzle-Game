@@ -2,6 +2,7 @@
 #include <string>
 #include <cstdlib>      // getenv
 #include <filesystem>
+#include <system_error>
 
 #include "../engine/piece_library.h"
 #include "../game/level_data.h"
@@ -15,49 +16,94 @@ using json = nlohmann::json;
 namespace fs = std::filesystem;
 
 
-std::vector<LevelInfo> g_levels;
+struct LevelGroup {
+    std::string id;      // group folder name 
+    std::string name;    // 先同 id
+    std::vector<LevelInfo> levels;
+};
+
+std::vector<LevelGroup> g_groups;
 
 void load_all_levels() {
-    g_levels.clear();
+    g_groups.clear();
 
-    std::string dir = "levels";
-    if (const char* p = std::getenv("LEVEL_DIR")) {
-        dir = p;
-    }
+    std::cerr << "[LEVEL] load_all_levels() enter\n";
 
-    std::error_code ec;
-    if (!fs::exists(dir, ec) || !fs::is_directory(dir, ec)) {
-        std::cerr << "[ERROR] levels dir not found: " << dir << "\n";
-        return; // 不要 throw 讓 Render 掛掉
-    }
+    std::error_code ec; 
+    std::string root = "levels";
+    if (const char* p = std::getenv("LEVEL_DIR")) root = p;
 
-    for (const auto& entry : fs::directory_iterator(dir, ec)) {
+    std::cerr << "[LEVEL] cwd=" << fs::current_path(ec).string() << "\n";
+    std::cerr << "[LEVEL] root=" << root << "\n";
+    std::cerr << "[LEVEL] exists=" << (fs::exists(root, ec) ? "yes" : "no") << "\n";
+    std::cerr << "[LEVEL] is_dir=" << (fs::is_directory(root, ec) ? "yes" : "no") << "\n";
+    for (const auto& groupEntry : fs::directory_iterator(root, ec)) {
         if (ec) {
-            std::cerr << "[ERROR] directory_iterator failed: " << ec.message() << "\n";
+            std::cerr << "[LEVEL] iterator error: " << ec.message() << "\n";
             return;
         }
-        if (entry.path().extension() != ".txt") continue;
 
-        LevelData ld = LevelLoader::load_level(entry.path().string());
+        if (!groupEntry.is_directory()) continue;
 
-        LevelInfo info;
-        info.id = entry.path().stem().string();
-        info.name = info.id;
-        info.width = ld.width;
-        info.height = ld.height;
+        const auto groupPath = groupEntry.path();
+        const auto groupName = groupPath.filename().string();
+        std::cerr << "[GROUP] " << groupName << "\n";
+        LevelGroup group;
+        group.id = groupName;
+        group.name = groupName;
 
-        for (const auto& piece : ld.pieces) {
-            info.pieceIds.push_back(piece.get_id());
+        for (const auto& fileEntry : fs::directory_iterator(groupPath, ec)) {
+            if (ec) {
+                std::cerr << "[LEVEL] iterator error: " << ec.message() << "\n";
+                return;
+            }
+            if (!fileEntry.is_regular_file()) continue;
+            if (fileEntry.path().extension() != ".txt") continue;
+
+            // std::cerr << "  - " << fileEntry.path().filename().string() << "\n";
+            try {
+                LevelData ld = LevelLoader::load_level(fileEntry.path().string());
+                std::cerr << "  - " << fileEntry.path().filename().string()
+                        << " (" << ld.width << "x" << ld.height
+                        << ", pieces=" << ld.pieces.size() << ")\n";
+                LevelInfo li;
+                li.id = fileEntry.path().stem().string();      // level1
+                li.name = li.id;
+                li.width = ld.width;
+                li.height = ld.height;
+
+                // pieceIds：從 ld.pieces 抽 id，並去重 + 排序
+                std::vector<int> ids;
+                ids.reserve(ld.pieces.size());
+                for (const auto& pc : ld.pieces) {
+                    ids.push_back(pc.get_id());
+                }
+                std::sort(ids.begin(), ids.end());
+                ids.erase(std::unique(ids.begin(), ids.end()), ids.end());
+                li.pieceIds = std::move(ids);
+
+                group.levels.push_back(std::move(li));
+            } catch (const std::exception& e) {
+                std::cerr << "  - " << fileEntry.path().filename().string()
+                        << " [LOAD FAIL] " << e.what() << "\n";
+            }
+
+            
         }
-
-        std::sort(info.pieceIds.begin(), info.pieceIds.end());
-        info.pieceIds.erase(std::unique(info.pieceIds.begin(), info.pieceIds.end()), info.pieceIds.end());
-
-        g_levels.push_back(std::move(info));
+        g_groups.emplace_back(std::move(group));
     }
 
-    std::cerr << "[INFO] loaded levels: " << g_levels.size() << " from " << dir << "\n";
+    std::sort(g_groups.begin(), g_groups.end(),
+            [](const LevelGroup& a, const LevelGroup& b) {
+                return a.name < b.name;
+            });
+
+    std::cerr << "[INFO] loaded groups=" << g_groups.size() << "\n";
+    for (const auto& g : g_groups) {
+        std::cerr << "  [G] " << g.name << " levels=" << g.levels.size() << "\n";
+    }
 }
+
 
 static int get_port() {
     if (const char* p = std::getenv("PORT")) {
@@ -103,7 +149,9 @@ static json to_json(const SolveResult& r) {
 int main() {
     httplib::Server svr;
 
+    std::cerr << "[BOOT] before load_all_levels\n";
     load_all_levels();
+    std::cerr << "[BOOT] after load_all_levels\n";
 
     svr.set_error_handler([](const httplib::Request& req, httplib::Response& res) {
         add_cors(res);
@@ -161,26 +209,36 @@ int main() {
         res.status = 200;
     });
 
-    svr.Get("/levels", [](const httplib::Request&, httplib::Response& res) {
+    svr.Get("/groups", [](const httplib::Request&, httplib::Response& res) {
         add_cors(res);
 
         json out;
-        out["levels"] = json::array();
+        out["groups"] = json::array();
 
-        for (const auto& l : g_levels) {
-            out["levels"].push_back({
-                {"id", l.id},
-                {"name", l.name},
-                {"width", l.width},
-                {"height", l.height},
-                {"pieceIds", l.pieceIds}
-            });
+        for (const auto& g : g_groups) {
+            json gj;
+            gj["groupId"] = g.id;
+            gj["name"] = g.name;
+
+            json levels = json::array();
+            for (const auto& lv : g.levels) {
+                levels.push_back({
+                    {"id", lv.id},
+                    {"name", lv.name},
+                    {"width", lv.width},
+                    {"height", lv.height},
+                    {"pieceIds", lv.pieceIds}
+                });
+            }
+            gj["levels"] = std::move(levels);
+
+            out["groups"].push_back(std::move(gj));
         }
-        
 
         res.set_content(out.dump(2), "application/json; charset=utf-8");
-        res.status = 200;   
+        res.status = 200;
     });
+
 
 
     svr.Post("/solve", [](const httplib::Request& req, httplib::Response& res) {
