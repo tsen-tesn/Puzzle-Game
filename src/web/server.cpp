@@ -20,6 +20,9 @@ std::vector<LevelInfo> g_levels;
 void load_all_levels() {
     g_levels.clear();
 
+    std::string levels_dir = "levels";
+    if (const char* p = std::getenv("LEVEL_DIR")) levels_dir = p;
+    
     for (const auto& entry : fs::directory_iterator("../levels")) {
         if (entry.path().extension() != ".txt") continue;
 
