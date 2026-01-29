@@ -31,7 +31,7 @@ bool Solver::dfs() {
         if (empty_cell.x != -1) break;
     }
 
-    // 如果找不到空格，代表棋盤已填滿 → 成功
+    // if no empty cell, solved
     if (empty_cell.x == -1) {
         return true;
     }

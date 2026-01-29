@@ -18,30 +18,26 @@ static int get_port() {
             // fall through
         }
     }
-    return 8080; // 本機預設
+    return 8080; // 預設
 }
 
-// 統一加 CORS（最穩：每個 response 都加一次）
 static void add_cors(httplib::Response& res) {
     res.set_header("Access-Control-Allow-Origin", "*");
     res.set_header("Access-Control-Allow-Methods", "POST, GET, OPTIONS");
     res.set_header("Access-Control-Allow-Headers", "Content-Type");
-    // 如果你之後要帶 cookie / auth，這裡就不能用 "*"，要改成指定網域並加 Allow-Credentials
 }
 
-// 把 SolveResult 轉成 JSON
 static json to_json(const SolveResult& r) {
     json j;
     j["solved"] = r.solved;
 
-    // 你這裡欄位名是 error_message（不是 error）
     j["error"] = r.error_message;
 
     json placements = json::array();
     for (const auto& p : r.placements) {
         json pj;
         pj["pieceId"] = p.pieceId;
-        pj["variantIndex"] = p.variantIndex; // debug 可留
+        pj["variantIndex"] = p.variantIndex; // debug 用
 
         json cells = json::array();
         for (const auto& c : p.cells) {
@@ -95,8 +91,7 @@ int main() {
         json out;
         out["pieces"] = json::array();
 
-        // 取得全部拼圖（用你現成的 PieceLibrary）
-        std::vector<Piece> pieces = PieceLibrary::make_all_pieces();
+        auto pieces = PieceLibrary::make_all_pieces();  
 
         for (const auto& p : pieces) {
             json pj;
@@ -114,6 +109,7 @@ int main() {
         res.set_content(out.dump(2), "application/json; charset=utf-8");
         res.status = 200;
     });
+
 
 
     svr.Post("/solve", [](const httplib::Request& req, httplib::Response& res) {

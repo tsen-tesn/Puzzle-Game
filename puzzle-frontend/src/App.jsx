@@ -21,33 +21,32 @@ function applyPlacementsToGrid(width, height, placements) {
   return g
 }
 
-// ✅ Render base URL（production） / dev 用 proxy
+// Render base URL（production） / dev 用 proxy
 const API_BASE = import.meta.env.PROD
   ? 'https://puzzle-game-698n.onrender.com'
   : ''
 
 function apiUrl(path) {
-  // production: 絕對網址；dev: 走 vite proxy
   return import.meta.env.PROD
     ? new URL(path, API_BASE).toString()
     : `/${path}`
 }
 
 export default function App() {
-  const [width, setWidth] = useState(10)
+  const [width, setWidth] = useState(3)
   const [height, setHeight] = useState(5)
 
-  const [grid, setGrid] = useState(() => emptyGrid(10, 5))
+  const [grid, setGrid] = useState(() => emptyGrid(3, 5))
   const [loading, setLoading] = useState(false)
   const [msg, setMsg] = useState('')
 
-  // ✅ 新增：pieces 清單（來自 GET /pieces）
   const [pieces, setPieces] = useState([]) // [{pieceId, cells:[{x,y}]}]
   const [piecesMsg, setPiecesMsg] = useState('')
 
-  const pieceIds = useMemo(() => [0, 1, 2, 3, 5, 7, 8, 9, 10, 11], [])
+  // const pieceIds = useMemo(() => [0, 1, 2, 3, 5, 7, 8, 9, 10, 11], [])
+  const pieceIds = useMemo(() => [0, 1, 2], [])
 
-  // ✅ 載入 pieces（右側預覽）
+
   useEffect(() => {
     async function loadPieces() {
       setPiecesMsg('Loading pieces...')

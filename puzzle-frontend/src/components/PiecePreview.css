@@ -28,3 +28,16 @@
 .pCell.empty {
   background: #2a2a2a;
 }
+
+.pCell.piece-0 { background: #d17b38; } 
+.pCell.piece-1 { background: #22c55e; } 
+.pCell.piece-2 { background: #763bf6; } 
+.pCell.piece-3 { background: #d138c7; } 
+.pCell.piece-4 { background: #0f8f3e; } 
+.pCell.piece-5 { background: #39a6ff; } 
+.pCell.piece-6 { background: #384ad1; } 
+.pCell.piece-7 { background: #a31ef0; } 
+.pCell.piece-8 { background: #e9dc4d; } 
+.pCell.piece-9 { background: #ef89ea; } 
+.pCell.piece-10 { background: #eb9f24; }
+.pCell.piece-11 { background: #d3f720; } 
