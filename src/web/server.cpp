@@ -20,26 +20,43 @@ std::vector<LevelInfo> g_levels;
 void load_all_levels() {
     g_levels.clear();
 
-    std::string levels_dir = "levels";
-    if (const char* p = std::getenv("LEVEL_DIR")) levels_dir = p;
-    
-    for (const auto& entry : fs::directory_iterator("../levels")) {
+    std::string dir = "levels";
+    if (const char* p = std::getenv("LEVEL_DIR")) {
+        dir = p;
+    }
+
+    std::error_code ec;
+    if (!fs::exists(dir, ec) || !fs::is_directory(dir, ec)) {
+        std::cerr << "[ERROR] levels dir not found: " << dir << "\n";
+        return; // 不要 throw 讓 Render 掛掉
+    }
+
+    for (const auto& entry : fs::directory_iterator(dir, ec)) {
+        if (ec) {
+            std::cerr << "[ERROR] directory_iterator failed: " << ec.message() << "\n";
+            return;
+        }
         if (entry.path().extension() != ".txt") continue;
 
         LevelData ld = LevelLoader::load_level(entry.path().string());
 
         LevelInfo info;
-        info.id = entry.path().stem().string(); // level1
-        info.name = info.id;                    // 先簡單用 id
+        info.id = entry.path().stem().string();
+        info.name = info.id;
         info.width = ld.width;
         info.height = ld.height;
 
-        for(auto pieces : ld.pieces) {
-            info.pieceIds.push_back(pieces.get_id());
+        for (const auto& piece : ld.pieces) {
+            info.pieceIds.push_back(piece.get_id());
         }
-        
-        g_levels.push_back(info);
+
+        std::sort(info.pieceIds.begin(), info.pieceIds.end());
+        info.pieceIds.erase(std::unique(info.pieceIds.begin(), info.pieceIds.end()), info.pieceIds.end());
+
+        g_levels.push_back(std::move(info));
     }
+
+    std::cerr << "[INFO] loaded levels: " << g_levels.size() << " from " << dir << "\n";
 }
 
 static int get_port() {
