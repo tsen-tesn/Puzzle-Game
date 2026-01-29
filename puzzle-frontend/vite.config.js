@@ -5,6 +5,8 @@ export default defineConfig({
   plugins: [react()],
   base: '/Puzzle-Game/',  // set for GitHub Pages
   server: {
+    port: 5173,
+    strictPort: true,
     proxy: {
       '/solve': {
         target: 'http://127.0.0.1:8080',
@@ -19,6 +21,10 @@ export default defineConfig({
         changeOrigin: true,
       },
       '/levels': {
+        target: 'http://127.0.0.1:8080',
+        changeOrigin: true,
+      },
+      '/groups': {
         target: 'http://127.0.0.1:8080',
         changeOrigin: true,
       },

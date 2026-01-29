@@ -23,22 +23,20 @@ function applyPlacementsToGrid(width, height, placements) {
 }
 
 // Production( GitHub Pages ) 打 Render；Dev(本機) 走 Vite proxy
-const API_BASE = import.meta.env.PROD
-  ? 'https://puzzle-game-698n.onrender.com'
-  : ''
+const API_BASE = import.meta.env.PROD ? 'https://puzzle-game-698n.onrender.com' : ''
 
 function apiUrl(path) {
-  // path 例如 'solve' / 'pieces' / 'levels'
-  return import.meta.env.PROD ? new URL(path, API_BASE).toString() : `/${path}`
+  const p = path.startsWith('/') ? path : `/${path}`
+  return import.meta.env.PROD ? `${API_BASE}${p}` : p
 }
 
 export default function App() {
   // -----------------------
-  // (A) Levels 狀態
+  // (A) Levels 狀態（其實是從 /groups flatten 出來的 levels）
   // -----------------------
   const [levels, setLevels] = useState([])
   const [levelsMsg, setLevelsMsg] = useState('')
-  const [levelId, setLevelId] = useState('')
+  const [levelId, setLevelId] = useState('') // ★ 這裡存的是 fullId
 
   // -----------------------
   // (B) Pieces 狀態（全部 pieces）
@@ -49,15 +47,15 @@ export default function App() {
   // -----------------------
   // (C) 棋盤狀態
   // -----------------------
-  const [grid, setGrid] = useState(() => emptyGrid(1, 1)) // 初始先給 1x1，避免 level 還沒載入就爆
+  const [grid, setGrid] = useState(() => emptyGrid(1, 1))
   const [loading, setLoading] = useState(false)
   const [msg, setMsg] = useState('')
 
   // -----------------------
-  // (D) 取得目前關卡（可能為 null）
+  // (D) 取得目前關卡（★ 用 fullId 找）
   // -----------------------
   const level = useMemo(() => {
-    return levels.find(l => l.id === levelId) || null
+    return levels.find(l => l.fullId === levelId) || null
   }, [levels, levelId])
 
   // 給安全預設，避免 level 為 null 時崩潰
@@ -74,26 +72,49 @@ export default function App() {
   }, [allPieces, pieceIds])
 
   // =====================================================
-  // useEffect 1：初次載入 levels
+  // useEffect 1：初次載入 groups -> flatten 成 levels
   // =====================================================
   useEffect(() => {
-    async function loadLevels() {
+    async function loadLevelsFromGroups() {
       setLevelsMsg('Loading levels...')
       try {
-        const res = await fetch(apiUrl('levels'))
+        const res = await fetch(apiUrl('groups'))
+
+        if (!res.ok) {
+          const text = await res.text()
+          setLevelsMsg(`Load levels failed (HTTP ${res.status}): ${text.slice(0, 120)}`)
+          setLevels([])
+          setLevelId('')
+          return
+        }
+
         const data = await res.json()
-        const list = data.levels || []
+        const groups = data.groups || []
 
-        setLevels(list)
+        const flatLevels = groups.flatMap((g) =>
+          (g.levels || []).map((lv) => {
+            const groupId = g.groupId ?? g.id ?? g.name
+            const lvId = lv.id ?? lv.name
+            return {
+              ...lv,
+              groupId,
+              groupName: g.name ?? String(groupId),
+              fullId: `${groupId}/${lvId}`, // ✅ 全域唯一
+            }
+          })
+        )
+
+        setLevels(flatLevels)
+        setLevelId(flatLevels[0]?.fullId ?? '')
         setLevelsMsg('')
-
-        // 預設選第一關
-        if (list.length > 0) setLevelId(list[0].id)
       } catch (e) {
         setLevelsMsg('Load levels failed: ' + String(e))
+        setLevels([])
+        setLevelId('')
       }
     }
-    loadLevels()
+
+    loadLevelsFromGroups()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
@@ -105,8 +126,12 @@ export default function App() {
       setPiecesMsg('Loading pieces...')
       try {
         const res = await fetch(apiUrl('pieces'))
+        if (!res.ok) {
+          const text = await res.text()
+          setPiecesMsg(`Load pieces failed (HTTP ${res.status}): ${text.slice(0, 120)}`)
+          return
+        }
         const data = await res.json()
-
         setAllPieces(data.pieces || [])
         setPiecesMsg('')
       } catch (e) {
@@ -142,7 +167,6 @@ export default function App() {
         body: JSON.stringify({ width, height, pieceIds }),
       })
 
-      // 用 text -> JSON.parse，避免後端回非 JSON 時直接炸
       const text = await res.text()
       let data
       try {
@@ -175,13 +199,31 @@ export default function App() {
   }
 
   // =====================================================
-  // Levels 還沒載入時：顯示 loading
+  // 顯示 Loading / No levels（更精準）
   // =====================================================
+  if (levelsMsg) {
+    return (
+      <div style={{ padding: 16, fontFamily: 'sans-serif' }}>
+        <h2>Puzzle Game</h2>
+        <div>{levelsMsg}</div>
+      </div>
+    )
+  }
+
+  if (levels.length === 0) {
+    return (
+      <div style={{ padding: 16, fontFamily: 'sans-serif' }}>
+        <h2>Puzzle Game</h2>
+        <div>No levels</div>
+      </div>
+    )
+  }
+
   if (!level) {
     return (
       <div style={{ padding: 16, fontFamily: 'sans-serif' }}>
         <h2>Puzzle Game</h2>
-        <div>{levelsMsg || 'No levels'}</div>
+        <div>Invalid levelId: {String(levelId)}</div>
       </div>
     )
   }
@@ -197,13 +239,13 @@ export default function App() {
         {/* 左側：控制列 + 棋盤 */}
         <div>
           <div style={{ display: 'flex', gap: 12, alignItems: 'center', marginBottom: 12 }}>
-            {/* 關卡選擇 */}
+            {/* 關卡選擇（★ value/key 都用 fullId） */}
             <label>
               Level:&nbsp;
               <select value={levelId} onChange={(e) => setLevelId(e.target.value)}>
                 {levels.map(l => (
-                  <option key={l.id} value={l.id}>
-                    {l.name}
+                  <option key={l.fullId} value={l.fullId}>
+                    {l.groupName} / {l.name ?? l.id}
                   </option>
                 ))}
               </select>
