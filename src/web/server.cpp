@@ -18,18 +18,6 @@ namespace fs = std::filesystem;
 std::vector<LevelInfo> g_levels;
 
 void load_all_levels() {
-
-    std::error_code ec;
-    std::cerr << "[LEVEL] current_path: " << fs::current_path(ec).string() << "\n";
-
-    const char* env = std::getenv("LEVEL_DIR");
-    std::cerr << "[LEVEL] LEVEL_DIR env: " << (env ? env : "(null)") << "\n";
-
-    std::string dir = env ? env : "levels";
-    std::cerr << "[LEVEL] using dir: " << dir << "\n";
-    std::cerr << "[LEVEL] exists? " << (fs::exists(dir, ec) ? "yes" : "no") << "\n";
-    std::cerr << "[LEVEL] is_directory? " << (fs::is_directory(dir, ec) ? "yes" : "no") << "\n";
-
     g_levels.clear();
 
     std::string dir = "levels";
@@ -41,11 +29,6 @@ void load_all_levels() {
     if (!fs::exists(dir, ec) || !fs::is_directory(dir, ec)) {
         std::cerr << "[ERROR] levels dir not found: " << dir << "\n";
         return; // 不要 throw 讓 Render 掛掉
-    }
-    
-    for (const auto& entry : fs::directory_iterator(dir, ec)) {
-        if (ec) { std::cerr << "[LEVEL] iterator error: " << ec.message() << "\n"; break; }
-        std::cerr << "[LEVEL] found: " << entry.path().string() << "\n";
     }
 
     for (const auto& entry : fs::directory_iterator(dir, ec)) {
@@ -118,15 +101,9 @@ static json to_json(const SolveResult& r) {
 }
 
 int main() {
-    std::cerr << "[BOOT] server starting...\n";
     httplib::Server svr;
 
-    try {
-        load_all_levels();
-    } catch (const std::exception& e) {
-        std::cerr << "[BOOT] load_all_levels exception: " << e.what() << "\n";
-    }
-    // load_all_levels();
+    load_all_levels();
 
     svr.set_error_handler([](const httplib::Request& req, httplib::Response& res) {
         add_cors(res);
