@@ -32,11 +32,12 @@ function apiUrl(path) {
 
 export default function App() {
   // -----------------------
-  // (A) Levels 狀態（其實是從 /groups flatten 出來的 levels）
+  // (A) Groups 狀態（大關卡）
   // -----------------------
-  const [levels, setLevels] = useState([])
+  const [groups, setGroups] = useState([])
   const [levelsMsg, setLevelsMsg] = useState('')
-  const [levelId, setLevelId] = useState('') // ★ 這裡存的是 fullId
+  const [groupId, setGroupId] = useState('') // ★ 大關卡
+  const [levelId, setLevelId] = useState('') // ★ 小關卡（在 group 內）
 
   // -----------------------
   // (B) Pieces 狀態（全部 pieces）
@@ -52,13 +53,18 @@ export default function App() {
   const [msg, setMsg] = useState('')
 
   // -----------------------
-  // (D) 取得目前關卡（★ 用 fullId 找）
+  // (D) 目前 group / level（由 groupId + levelId 決定）
   // -----------------------
-  const level = useMemo(() => {
-    return levels.find(l => l.fullId === levelId) || null
-  }, [levels, levelId])
+  const currentGroup = useMemo(() => {
+    return groups.find(g => String(g.groupId) === String(groupId)) || null
+  }, [groups, groupId])
 
-  // 給安全預設，避免 level 為 null 時崩潰
+  const level = useMemo(() => {
+    if (!currentGroup) return null
+    return (currentGroup.levels || []).find(lv => String(lv.id) === String(levelId)) || null
+  }, [currentGroup, levelId])
+
+  // 安全預設
   const width = level ? level.width : 1
   const height = level ? level.height : 1
   const pieceIds = level ? level.pieceIds : []
@@ -72,49 +78,43 @@ export default function App() {
   }, [allPieces, pieceIds])
 
   // =====================================================
-  // useEffect 1：初次載入 groups -> flatten 成 levels
+  // useEffect 1：初次載入 groups
   // =====================================================
   useEffect(() => {
-    async function loadLevelsFromGroups() {
-      setLevelsMsg('Loading levels...')
+    async function loadGroups() {
+      setLevelsMsg('Loading groups...')
       try {
         const res = await fetch(apiUrl('groups'))
 
         if (!res.ok) {
           const text = await res.text()
-          setLevelsMsg(`Load levels failed (HTTP ${res.status}): ${text.slice(0, 120)}`)
-          setLevels([])
+          setLevelsMsg(`Load groups failed (HTTP ${res.status}): ${text.slice(0, 120)}`)
+          setGroups([])
+          setGroupId('')
           setLevelId('')
           return
         }
 
         const data = await res.json()
-        const groups = data.groups || []
+        const gs = data.groups || []
+        setGroups(gs)
 
-        const flatLevels = groups.flatMap((g) =>
-          (g.levels || []).map((lv) => {
-            const groupId = g.groupId ?? g.id ?? g.name
-            const lvId = lv.id ?? lv.name
-            return {
-              ...lv,
-              groupId,
-              groupName: g.name ?? String(groupId),
-              fullId: `${groupId}/${lvId}`, // ✅ 全域唯一
-            }
-          })
-        )
+        // 預設選第一個 group + 其第一個 level
+        const g0 = gs[0]
+        const lv0 = g0?.levels?.[0]
+        setGroupId(g0 ? String(g0.groupId) : '')
+        setLevelId(lv0 ? String(lv0.id) : '')
 
-        setLevels(flatLevels)
-        setLevelId(flatLevels[0]?.fullId ?? '')
         setLevelsMsg('')
       } catch (e) {
-        setLevelsMsg('Load levels failed: ' + String(e))
-        setLevels([])
+        setLevelsMsg('Load groups failed: ' + String(e))
+        setGroups([])
+        setGroupId('')
         setLevelId('')
       }
     }
 
-    loadLevelsFromGroups()
+    loadGroups()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
@@ -143,13 +143,24 @@ export default function App() {
   }, [])
 
   // =====================================================
-  // useEffect 3：切換關卡時清空棋盤
+  // useEffect 3：切換關卡（level）時清空棋盤
   // =====================================================
   useEffect(() => {
     if (!level) return
     setGrid(emptyGrid(level.width, level.height))
     setMsg('')
-  }, [levelId, level])
+  }, [level, levelId])
+
+  // =====================================================
+  // 切換大關卡：同步切到該 group 的第一個 level
+  // =====================================================
+  function switchGroup(newGroupId) {
+    const g = groups.find(x => String(x.groupId) === String(newGroupId))
+    const lv0 = g?.levels?.[0]
+    setGroupId(String(newGroupId))
+    setLevelId(lv0 ? String(lv0.id) : '')
+    setMsg('')
+  }
 
   // =====================================================
   // Solve：呼叫後端 /solve
@@ -192,14 +203,13 @@ export default function App() {
     }
   }
 
-  // 清空棋盤
   function clearBoard() {
     setGrid(emptyGrid(width, height))
     setMsg('')
   }
 
   // =====================================================
-  // 顯示 Loading / No levels（更精準）
+  // 顯示 Loading / No groups / Invalid
   // =====================================================
   if (levelsMsg) {
     return (
@@ -210,11 +220,20 @@ export default function App() {
     )
   }
 
-  if (levels.length === 0) {
+  if (groups.length === 0) {
     return (
       <div style={{ padding: 16, fontFamily: 'sans-serif' }}>
         <h2>Puzzle Game</h2>
-        <div>No levels</div>
+        <div>No groups</div>
+      </div>
+    )
+  }
+
+  if (!currentGroup) {
+    return (
+      <div style={{ padding: 16, fontFamily: 'sans-serif' }}>
+        <h2>Puzzle Game</h2>
+        <div>Invalid groupId: {String(groupId)}</div>
       </div>
     )
   }
@@ -236,39 +255,65 @@ export default function App() {
       <h2>Puzzle Game</h2>
 
       <div style={{ display: 'flex', gap: 16, alignItems: 'flex-start' }}>
-        {/* 左側：控制列 + 棋盤 */}
+        {/* 最左側：大關卡按鈕 */}
+        <div style={{ width: 180 }}>
+          <h3 style={{ marginTop: 0 }}>Groups</h3>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {groups.map(g => {
+              const active = String(g.groupId) === String(groupId)
+              return (
+                <button
+                  key={String(g.groupId)}
+                  onClick={() => switchGroup(g.groupId)}
+                  disabled={loading}
+                  style={{
+                    textAlign: 'left',
+                    padding: '10px 12px',
+                    borderRadius: 8,
+                    border: '1px solid #ddd',
+                    cursor: 'pointer',
+                    fontWeight: active ? 700 : 400,
+                    background: active ? '#f5f5f5' : 'white',
+                  }}
+                >
+                  {g.name ?? String(g.groupId)}
+                </button>
+              )
+            })}
+          </div>
+        </div>
+
+        {/* 中間：控制列 + 棋盤 */}
         <div>
           <div style={{ display: 'flex', gap: 12, alignItems: 'center', marginBottom: 12 }}>
-            {/* 關卡選擇（★ value/key 都用 fullId） */}
+            {/* 小關卡選擇（只顯示目前 group 的 levels） */}
             <label>
               Level:&nbsp;
-              <select value={levelId} onChange={(e) => setLevelId(e.target.value)}>
-                {levels.map(l => (
-                  <option key={l.fullId} value={l.fullId}>
-                    {l.groupName} / {l.name ?? l.id}
+              <select value={levelId} onChange={(e) => setLevelId(e.target.value)} disabled={loading}>
+                {(currentGroup.levels || []).map(lv => (
+                  <option key={String(lv.id)} value={String(lv.id)}>
+                    {lv.name ?? lv.id}
                   </option>
                 ))}
               </select>
             </label>
 
-            {/* Solve */}
             <button onClick={solve} disabled={loading}>
               {loading ? 'Solving...' : 'Solve'}
             </button>
 
-            {/* Clear */}
             <button onClick={clearBoard} disabled={loading}>
               Clear
             </button>
 
-            {/* 訊息 */}
             <span style={{ marginLeft: 8 }}>{msg}</span>
           </div>
 
           <Board width={width} height={height} grid={grid} />
 
           <p style={{ color: '#666', marginTop: 12 }}>
-            選擇關卡後按 Solve，後端會回傳解答並顯示在棋盤上
+            選擇大關卡/小關卡後按 Solve，後端會回傳解答並顯示在棋盤上
           </p>
         </div>
 
