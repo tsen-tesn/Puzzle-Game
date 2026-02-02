@@ -90,6 +90,15 @@ export default function App() {
     return (currentGroup.levels || []).find(lv => String(lv.id) === String(levelId)) || null
   }, [currentGroup, levelId])
 
+  const orderedLevels = useMemo(() => {
+    if (!currentGroup) return []
+    return [...(currentGroup.levels || [])]
+      .map(lv => {
+        const n = parseInt(String(lv.id).match(/\d+/)?.[0] ?? '0', 10)
+        return { ...lv, _num: n }
+      })
+      .sort((a, b) => (a._num - b._num) || String(a.id).localeCompare(String(b.id)))
+  }, [currentGroup])  
   // 安全預設
   const width = level ? level.width : 1
   const height = level ? level.height : 1
@@ -322,18 +331,6 @@ export default function App() {
         {/* 中間：控制列 + 棋盤 */}
         <div>
           <div style={{ display: 'flex', gap: 12, alignItems: 'center', marginBottom: 12 }}>
-            {/* 小關卡選擇（只顯示目前 group 的 levels） */}
-            <label>
-              Level:&nbsp;
-              <select value={levelId} onChange={(e) => setLevelId(e.target.value)} disabled={loading}>
-                {(currentGroup.levels || []).map(lv => (
-                  <option key={String(lv.id)} value={String(lv.id)}>
-                    {lv.name ?? lv.id}
-                  </option>
-                ))}
-              </select>
-            </label>
-
             <button onClick={solve} disabled={loading}>
               {loading ? 'Solving...' : 'Solve'}
             </button>
@@ -357,11 +354,66 @@ export default function App() {
           <h3 style={{ marginTop: 0 }}>Pieces</h3>
           {piecesMsg && <div style={{ color: '#aaa', marginBottom: 8 }}>{piecesMsg}</div>}
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 12 }}>
             {levelPieces.map(p => (
               <PiecePreview key={p.pieceId} pieceId={p.pieceId} cells={p.cells} />
             ))}
           </div>
+
+          {/* ✅ Level 面板（現在會跟 Pieces 左對齊） */}
+          <div
+            style={{
+              
+              width: 355,
+              background: 'rgba(20,20,20,0.9)',
+              border: '1px solid rgba(255,255,255,0.12)',
+              borderRadius: 12,
+              padding: 12,
+              position: 'absolute', top: '500px'
+            }}
+          >
+            <div style={{ color: '#ddd', fontSize: 12, marginBottom: 8 }}>
+              Level
+            </div>
+
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(10, 30px)',
+                gap: 6,
+              }}
+            >
+              {orderedLevels.map(lv => {
+                const active = String(lv.id) === String(levelId)
+                return (
+                  <button
+                    key={lv.id}
+                    onClick={() => setLevelId(String(lv.id))}
+                    disabled={loading}
+                    style={{
+                      width: 30,
+                      height: 30,
+                      borderRadius: 8,
+                      border: active
+                        ? '1px solid rgba(255,255,255,0.55)'
+                        : '1px solid rgba(255,255,255,0.18)',
+                      background: active
+                        ? 'rgba(255,255,255,0.20)'
+                        : 'rgba(255,255,255,0.08)',
+                      color: '#fff',
+                      fontSize: 12,
+                      fontWeight: active ? 700 : 500,
+                      cursor: 'pointer',
+                      padding: 0,
+                    }}
+                  >
+                    {lv._num}
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+          
         </div>
       </div>
     </div>
