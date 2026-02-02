@@ -199,7 +199,15 @@ export default function App() {
   // =====================================================
   function switchGroup(newGroupId) {
     const g = groups.find(x => String(x.groupId) === String(newGroupId))
-    const lv0 = g?.levels?.[0]
+
+    const sortedLevels = [...(g?.levels || [])].sort((a, b) => {
+      const na = parseInt(String(a.id).match(/\d+/)?.[0] ?? '0', 10)
+      const nb = parseInt(String(b.id).match(/\d+/)?.[0] ?? '0', 10)
+      return (na - nb) || String(a.id).localeCompare(String(b.id))
+    })
+
+    const lv0 = sortedLevels[0]
+
     setGroupId(String(newGroupId))
     setLevelId(lv0 ? String(lv0.id) : '')
     setMsg('')
