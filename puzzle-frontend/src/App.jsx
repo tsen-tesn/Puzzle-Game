@@ -35,6 +35,32 @@ export default function App() {
   // (A) Groups 狀態（大關卡）
   // -----------------------
   const [groups, setGroups] = useState([])
+
+  const GROUP_ORDER = [
+    'The small slam',
+    'The slam1',
+    'The slam2',
+    'The slam3',
+    'The slam4',
+    'The grand slam',
+    'The super slam1',
+    'The super slam2',
+    'The super slam3',
+    'The super slam4',
+  ]
+
+  // 排序後的 groups
+  const orderedGroups = useMemo(() => {
+    const rank = new Map(GROUP_ORDER.map((id, i) => [String(id), i]))
+    return [...groups].sort((a, b) => {
+      const ra = rank.has(String(a.groupId)) ? rank.get(String(a.groupId)) : 9999
+      const rb = rank.has(String(b.groupId)) ? rank.get(String(b.groupId)) : 9999
+      if (ra !== rb) return ra - rb
+      // 沒在清單裡的：用 name 當穩定排序（可自行改）
+      return String(a.name ?? '').localeCompare(String(b.name ?? ''))
+    })
+  }, [groups])
+
   const [levelsMsg, setLevelsMsg] = useState('')
   const [groupId, setGroupId] = useState('') // ★ 大關卡
   const [levelId, setLevelId] = useState('') // ★ 小關卡（在 group 內）
@@ -99,8 +125,16 @@ export default function App() {
         const gs = data.groups || []
         setGroups(gs)
 
-        // 預設選第一個 group + 其第一個 level
-        const g0 = gs[0]
+        // ✅ 用同一套排序規則挑預設 group
+        const rank = new Map(GROUP_ORDER.map((id, i) => [String(id), i]))
+        const sorted = [...gs].sort((a, b) => {
+          const ra = rank.has(String(a.groupId)) ? rank.get(String(a.groupId)) : 9999
+          const rb = rank.has(String(b.groupId)) ? rank.get(String(b.groupId)) : 9999
+          if (ra !== rb) return ra - rb
+          return String(a.name ?? '').localeCompare(String(b.name ?? ''))
+        })
+
+        const g0 = sorted[0]
         const lv0 = g0?.levels?.[0]
         setGroupId(g0 ? String(g0.groupId) : '')
         setLevelId(lv0 ? String(lv0.id) : '')
@@ -254,13 +288,13 @@ export default function App() {
     <div style={{ padding: 16, fontFamily: 'sans-serif' }}>
       <h2>Puzzle Game</h2>
 
-      <div style={{ display: 'flex', gap: 16, alignItems: 'flex-start' }}>
+      <div style={{ display: 'flex', gap: 30, alignItems: 'flex-start' }}>
         {/* 最左側：大關卡按鈕 */}
         <div style={{ width: 180 }}>
           <h3 style={{ marginTop: 0 }}>Groups</h3>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            {groups.map(g => {
+            {orderedGroups.map(g => {
               const active = String(g.groupId) === String(groupId)
               return (
                 <button
@@ -273,6 +307,7 @@ export default function App() {
                     borderRadius: 8,
                     border: '1px solid #ddd',
                     cursor: 'pointer',
+                    color: '#111',
                     fontWeight: active ? 700 : 400,
                     background: active ? '#f5f5f5' : 'white',
                   }}
@@ -313,7 +348,7 @@ export default function App() {
           <Board width={width} height={height} grid={grid} />
 
           <p style={{ color: '#666', marginTop: 12 }}>
-            選擇大關卡/小關卡後按 Solve，後端會回傳解答並顯示在棋盤上
+            選擇大關卡/小關卡後按 Solve 後端會回傳解答並顯示在棋盤上
           </p>
         </div>
 
