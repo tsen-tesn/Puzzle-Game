@@ -36,6 +36,7 @@ export default function App() {
   // -----------------------
   const [groups, setGroups] = useState([])
 
+  // 大關卡的順序
   const GROUP_ORDER = [
     'The small slam',
     'The slam1',
@@ -62,8 +63,8 @@ export default function App() {
   }, [groups])
 
   const [levelsMsg, setLevelsMsg] = useState('')
-  const [groupId, setGroupId] = useState('') // ★ 大關卡
-  const [levelId, setLevelId] = useState('') // ★ 小關卡（在 group 內）
+  const [groupId, setGroupId] = useState('') // 大關卡
+  const [levelId, setLevelId] = useState('') // 小關卡（在 group 內）
 
   // -----------------------
   // (B) Pieces 狀態（全部 pieces）
@@ -98,7 +99,9 @@ export default function App() {
         return { ...lv, _num: n }
       })
       .sort((a, b) => (a._num - b._num) || String(a.id).localeCompare(String(b.id)))
-  }, [currentGroup])  
+  }, [currentGroup]) 
+  
+  
   // 安全預設
   const width = level ? level.width : 1
   const height = level ? level.height : 1
@@ -134,7 +137,7 @@ export default function App() {
         const gs = data.groups || []
         setGroups(gs)
 
-        // ✅ 用同一套排序規則挑預設 group
+        // 用同一套排序規則挑預設 group
         const rank = new Map(GROUP_ORDER.map((id, i) => [String(id), i]))
         const sorted = [...gs].sort((a, b) => {
           const ra = rank.has(String(a.groupId)) ? rank.get(String(a.groupId)) : 9999
