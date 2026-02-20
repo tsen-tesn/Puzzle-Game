@@ -115,6 +115,9 @@ export default function App() {
     return allPieces.filter(p => setIds.has(p.pieceId))
   }, [allPieces, pieceIds])
 
+  const [tool, setTool] = useState('mouse') // 'mouse' | 'drag'
+  const [dragging, setDragging] = useState(null)
+
   // =====================================================
   // useEffect 1：初次載入 groups
   // =====================================================
@@ -197,6 +200,30 @@ export default function App() {
     setMsg('')
   }, [level, levelId])
 
+  // =====================================================
+  // useEffect 4：mousemove 監聽 拖移中更新座標
+  // =====================================================
+  useEffect(() => {
+    if (!dragging) return
+
+    function onMove(e) {
+      setDragging(d => (d ? { ...d, x: e.clientX, y: e.clientY } : d))
+    }
+
+    window.addEventListener('mousemove', onMove)
+    return () => window.removeEventListener('mousemove', onMove)
+  }, [dragging])
+
+  // =====================================================
+  // useEffect 5：按 ESC 取消（最舒服）
+  // =====================================================
+  useEffect(() => {
+    function onKeyDown(e) {
+      if (e.key === 'Escape') setDragging(null)
+    }
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [])
   // =====================================================
   // 切換大關卡：同步切到該 group 的第一個 level
   // =====================================================
@@ -342,6 +369,42 @@ export default function App() {
         {/* 中間：控制列 + 棋盤 */}
         <div>
           <div style={{ display: 'flex', gap: 12, alignItems: 'center', marginBottom: 12 }}>
+            <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+              <button
+                onClick={() => setTool('mouse')}
+                disabled={loading}
+                style={{
+                  padding: '8px 12px',
+                  borderRadius: 10,
+                  border: '1px solid rgba(255,255,255,0.15)',
+                  background: tool === 'mouse' ? 'rgba(255,255,255,0.18)' : 'rgba(255,255,255,0.08)',
+                  color: '#fff',
+                  cursor: 'pointer',
+                  fontWeight: tool === 'mouse' ? 700 : 500,
+                }}
+                title="滑鼠模式：正常操作介面（不攔截右鍵）"
+              >
+                🖱️
+              </button>
+
+              <button
+                onClick={() => setTool('drag')}
+                disabled={loading}
+                style={{
+                  padding: '8px 12px',
+                  borderRadius: 10,
+                  border: '1px solid rgba(255,255,255,0.15)',
+                  background: tool === 'drag' ? 'rgba(255,255,255,0.18)' : 'rgba(255,255,255,0.08)',
+                  color: '#fff',
+                  cursor: 'pointer',
+                  fontWeight: tool === 'drag' ? 700 : 500,
+                }}
+                title="拖移模式：在 pieces 上按右鍵抓取（下一步做）"
+              >
+                🤚
+              </button>
+            </div>
+
             <button onClick={solve} disabled={loading}>
               {loading ? 'Solving...' : 'Solve'}
             </button>
@@ -367,9 +430,38 @@ export default function App() {
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 12 }}>
             {levelPieces.map(p => (
-              <PiecePreview key={p.pieceId} pieceId={p.pieceId} cells={p.cells} />
+              <div
+                key={p.pieceId}
+                onContextMenu={(e) => {
+                  // 只在拖移模式才處理
+                  if (tool !== 'drag') return
+
+                  e.preventDefault() // 阻止瀏覽器右鍵選單
+
+                  setDragging({
+                    pieceId: p.pieceId,
+                    cells: p.cells,
+                    x: e.clientX,
+                    y: e.clientY,
+                  })
+
+                  console.log('grabbed piece:', p.pieceId)
+                }}
+                style={{
+                  cursor: tool === 'drag' ? 'grab' : 'default',
+                }}
+              >
+                <PiecePreview pieceId={p.pieceId} cells={p.cells} />
+              </div>
             ))}
+
+            {dragging && (
+              <div style={{ marginTop: 8, color: '#aaa', fontSize: 12 }}>
+                🤚 已抓取 piece {dragging.pieceId}
+              </div>
+            )}
           </div>
+          
 
           {/* ✅ Level 面板（現在會跟 Pieces 左對齊） */}
           <div
@@ -427,6 +519,22 @@ export default function App() {
           
         </div>
       </div>
+      {dragging && (
+        <div
+          style={{
+            position: 'fixed',
+            left: dragging.x,
+            top: dragging.y,
+            transform: 'translate(12px, 12px)',
+            opacity: 0.75,
+            pointerEvents: 'none',
+            zIndex: 99999,
+            filter: 'drop-shadow(0 6px 14px rgba(0,0,0,0.35))',
+          }}
+        >
+          <PiecePreview pieceId={dragging.pieceId} cells={dragging.cells} />
+        </div>
+      )}
     </div>
   )
 }
